@@ -77,8 +77,42 @@ def last_n_days(daily, n):
     cutoff = (datetime.now() - timedelta(days=n)).strftime("%Y-%m-%d")
     return [d for d in daily if d["date"] >= cutoff]
 
+def stats_from_history(history_path):
+    from collections import defaultdict
+    daily = defaultdict(int)
+    try:
+        path = os.path.realpath(history_path)
+        with open(path) as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                    ts = d.get("timestamp", 0)
+                    if ts:
+                        date = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d")
+                        daily[date] += 1
+                except Exception:
+                    pass
+    except Exception:
+        return None
+    if not daily:
+        return None
+    activity = [{"date": k, "messageCount": v, "sessionCount": 0, "toolCallCount": 0}
+                for k, v in sorted(daily.items())]
+    return {
+        "dailyActivity": activity,
+        "modelUsage": {},
+        "totalMessages": sum(daily.values()),
+        "totalSessions": 0,
+        "firstSessionDate": sorted(daily.keys())[0],
+        "_from_history": True,
+    }
+
 def render_card(acc):
     stats  = load_json(f"{acc['dir']}/stats-cache.json")
+    if not stats:
+        history_path = f"{acc['dir']}/history.jsonl"
+        if os.path.exists(history_path):
+            stats = stats_from_history(history_path)
     limits = load_json(f"{acc['dir']}/rate-limits-cache.json")
     today  = datetime.now().strftime("%Y-%m-%d")
 
