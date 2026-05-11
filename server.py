@@ -7,11 +7,11 @@ PORT = 4242
 HOME = os.path.expanduser("~")
 
 ACCOUNTS = [
-    {"name": "Jang",     "alias": "claude-g",        "dir": f"{HOME}/.claude-account1"},
+    {"name": "personal", "alias": "claude-mine",      "dir": f"{HOME}/.claude"},
     {"name": "Man",      "alias": "claude-crossian",  "dir": f"{HOME}/.claude-account2"},
     {"name": "Hao",      "alias": "claude-h",         "dir": f"{HOME}/.claude-account3"},
     {"name": "Tan",      "alias": "claude-t",         "dir": f"{HOME}/.claude-account4"},
-    {"name": "personal", "alias": "claude-mine",      "dir": f"{HOME}/.claude"},
+    {"name": "Jang",     "alias": "claude-g",         "dir": f"{HOME}/.claude-account1"},
 ]
 
 MODEL_SHORT = {
