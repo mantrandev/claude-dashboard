@@ -2,8 +2,6 @@
 
 Local web dashboard for monitoring Claude account quotas and usage across multiple accounts.
 
-![dashboard preview](https://github.com/user-attachments/assets/placeholder)
-
 ## What it shows
 
 - **Quota bars** — 5h and 7d rate limit usage with time-to-reset (populated after first session)
