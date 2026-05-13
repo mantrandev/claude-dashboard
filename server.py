@@ -12,6 +12,7 @@ ACCOUNTS = [
     {"name": "Hao",      "alias": "claude-h",         "dir": f"{HOME}/.claude-account3"},
     {"name": "Tan",      "alias": "claude-t",         "dir": f"{HOME}/.claude-account4"},
     {"name": "Jang",     "alias": "claude-g",         "dir": f"{HOME}/.claude-account1"},
+    {"name": "Xiaomi",   "alias": "claude-xiaomi",    "dir": f"{HOME}/.claude-account5", "token_limit": 700_000_000},
 ]
 
 MODEL_SHORT = {
@@ -132,6 +133,31 @@ def render_card(acc):
     else:
         quota_html = f'<div class="no-data">No quota data — active session required</div><div class="divider"></div>'
 
+    # token limit section
+    token_limit = acc.get("token_limit")
+    token_limit_html = ""
+    if token_limit and stats:
+        total_out = sum(
+            mu.get("outputTokens", 0)
+            for mu in stats.get("modelUsage", {}).values()
+        )
+        pct = min(int(total_out * 100 / token_limit), 100)
+        color = bar_color(pct)
+        used_str = fmt_num(total_out)
+        limit_str = fmt_num(token_limit)
+        token_limit_html = f"""
+      <div class="section-label" style="margin-bottom:6px">Token Limit</div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <span class="section-label">Output tokens</span>
+          <span style="font-size:11px;color:{color}">{pct}% &nbsp;<span style="color:#6e7681">{used_str} / {limit_str}</span></span>
+        </div>
+        <div style="background:#21262d;height:6px;border-radius:3px;overflow:hidden">
+          <div style="width:{pct}%;height:100%;background:{color};border-radius:3px"></div>
+        </div>
+      </div>
+      <div class="divider"></div>"""
+
     # stats section
     if not stats:
         return f"""
@@ -176,6 +202,7 @@ def render_card(acc):
         <span class="alias">{acc['alias']}</span>
       </div>
       {quota_html}
+      {token_limit_html}
       <div class="section-label">Today</div>
       <div class="stat-row">
         <div class="stat"><div class="stat-val">{fmt_num(msgs_today)}</div><div class="stat-lbl">messages</div></div>
