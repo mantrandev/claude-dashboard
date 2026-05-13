@@ -237,7 +237,7 @@ def generate_html():
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Claude Dashboard</title>
+<title>Agent Accounts</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
@@ -265,7 +265,7 @@ def generate_html():
 <body>
 <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px">
   <div>
-    <div style="font-size:18px;color:#f0883e;font-weight:600">Claude Accounts</div>
+    <div style="font-size:18px;color:#f0883e;font-weight:600">Agent Accounts</div>
     <div style="font-size:11px;color:#484f58;margin-top:2px">Refreshed {now_str} &nbsp;·&nbsp; <a href="/" style="color:#58a6ff;text-decoration:none">↺ refresh</a></div>
   </div>
 </div>
