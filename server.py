@@ -108,6 +108,127 @@ def stats_from_history(history_path):
         "_from_history": True,
     }
 
+def load_codex_stats():
+    import sqlite3
+    from collections import defaultdict
+    state_db = f"{HOME}/.codex/state_5.sqlite"
+    history_path = f"{HOME}/.codex/history.jsonl"
+    if not os.path.exists(state_db):
+        return None
+    try:
+        conn = sqlite3.connect(state_db)
+        threads = conn.execute(
+            "SELECT created_at, updated_at, model, tokens_used, has_user_event, archived FROM threads"
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return None
+
+    daily_sessions = defaultdict(int)
+    daily_tokens = defaultdict(int)
+    model_tokens = defaultdict(int)
+    for created_at, updated_at, model, tokens, has_user, archived in threads:
+        date = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d")
+        daily_sessions[date] += 1
+        daily_tokens[date] += tokens or 0
+        if model:
+            model_tokens[model] += tokens or 0
+
+    daily_msgs = defaultdict(int)
+    if os.path.exists(history_path):
+        try:
+            with open(history_path) as f:
+                for line in f:
+                    try:
+                        d = json.loads(line)
+                        ts = d.get("ts", 0)
+                        if ts:
+                            date = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                            daily_msgs[date] += 1
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    all_dates = sorted(set(list(daily_sessions.keys()) + list(daily_msgs.keys())))
+    last_active = all_dates[-1] if all_dates else "?"
+
+    return {
+        "daily_sessions": daily_sessions,
+        "daily_msgs": daily_msgs,
+        "daily_tokens": daily_tokens,
+        "model_tokens": dict(model_tokens),
+        "total_sessions": len(threads),
+        "total_tokens": sum(t[3] or 0 for t in threads),
+        "last_active": last_active,
+        "first_date": all_dates[0] if all_dates else "?",
+    }
+
+
+def render_codex_card():
+    stats = load_codex_stats()
+    if not stats:
+        return """
+    <div class="card">
+      <div class="card-header">
+        <span class="account-name" style="color:#a5d6ff">Codex</span>
+        <span class="alias">~/.codex</span>
+      </div>
+      <div class="no-data">No Codex data found</div>
+    </div>"""
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    cutoff_7d = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+
+    sessions_today = stats["daily_sessions"].get(today, 0)
+    msgs_today = stats["daily_msgs"].get(today, 0)
+    tokens_today = stats["daily_tokens"].get(today, 0)
+
+    sessions_7d = sum(v for k, v in stats["daily_sessions"].items() if k >= cutoff_7d)
+    msgs_7d = sum(v for k, v in stats["daily_msgs"].items() if k >= cutoff_7d)
+    tokens_7d = sum(v for k, v in stats["daily_tokens"].items() if k >= cutoff_7d)
+
+    model_rows = ""
+    for model, tok in sorted(stats["model_tokens"].items(), key=lambda x: -x[1]):
+        if not tok:
+            continue
+        model_rows += f'<div class="model-row"><span class="model-name">{model}</span><span class="model-tok">{fmt_num(tok)} tok</span></div>'
+
+    return f"""
+    <div class="card">
+      <div class="card-header">
+        <span class="account-name" style="color:#a5d6ff">Codex</span>
+        <span class="alias">~/.codex</span>
+      </div>
+      <div class="section-label">Today</div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val">{sessions_today}</div><div class="stat-lbl">sessions</div></div>
+        <div class="stat"><div class="stat-val">{fmt_num(msgs_today)}</div><div class="stat-lbl">messages</div></div>
+        <div class="stat"><div class="stat-val">{fmt_num(tokens_today)}</div><div class="stat-lbl">tokens</div></div>
+      </div>
+
+      <div class="section-label">Last 7 days</div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val">{sessions_7d}</div><div class="stat-lbl">sessions</div></div>
+        <div class="stat"><div class="stat-val">{fmt_num(msgs_7d)}</div><div class="stat-lbl">messages</div></div>
+        <div class="stat"><div class="stat-val">{fmt_num(tokens_7d)}</div><div class="stat-lbl">tokens</div></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Models</div>
+      <div class="model-list">{model_rows or '<span class="dim">—</span>'}</div>
+
+      <div class="divider"></div>
+      <div class="footer-row">
+        <span class="dim">Since {stats['first_date']}</span>
+        <span class="dim">{stats['total_sessions']} sessions · {fmt_num(stats['total_tokens'])} tokens</span>
+      </div>
+      <div class="footer-row">
+        <span class="dim">Last active: {stats['last_active']}</span>
+      </div>
+    </div>"""
+
+
 def render_card(acc):
     stats  = load_json(f"{acc['dir']}/stats-cache.json")
     if not stats:
@@ -231,7 +352,7 @@ def render_card(acc):
     </div>"""
 
 def generate_html():
-    cards   = "\n".join(render_card(a) for a in ACCOUNTS)
+    cards   = render_codex_card() + "\n" + "\n".join(render_card(a) for a in ACCOUNTS)
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return f"""<!DOCTYPE html>
 <html lang="en">
